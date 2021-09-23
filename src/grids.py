@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Tuple, TextIO, Callable, Optional
+from typing import List, Tuple, TextIO, Union, Iterable
 
 Position = Tuple[int, int]
 
@@ -19,7 +19,7 @@ class GridNode:
         self.right = None
         self.down = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[GridNode]:
         return iter(
             node for node in (
                 getattr(self, side) for side in ("left", "up", "right", "down")
@@ -37,6 +37,9 @@ class GridNode:
             raise ValueError(f"cannot compare {type(other)} with GridNode", self, other)
 
         return self.row == other.row and self.col == other.col
+
+
+GridPath = List[Union[GridNode, Position]]
 
 
 class Grid(tuple):
