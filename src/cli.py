@@ -1,16 +1,21 @@
 from argparse import Action, ArgumentParser
 from paths import *
-from pathlib import Path
 from grids import *
 
-GRID_NODE_ARGS = ("start", "goal")
+
+# Load Grid from file when it's passed as an argument
+def grid_file(value: str):
+    with open(value, 'r') as fp:
+        return Grid.load(fp)
 
 
+# Return a tuple of indices when the node position is passed as an argument
 def parse_position(value: str) -> Position:
     r, c = (int(s) for s in value.split(','))
     return r, c
 
 
+# Return the function for the search method when it's passed as an argument
 def parse_search_method(value: str) -> SearchMethod:
     try:
         return PathPlanning.methods[value]
@@ -18,49 +23,35 @@ def parse_search_method(value: str) -> SearchMethod:
         raise ValueError(f"Unknown search method '{value}'")
 
 
-class ReadGrid(Action):
-    def __call__(self, parser, namespace, path: Path, *args, **kwargs):
-        with open(path, 'r') as fp:
-            setattr(namespace, self.dest, Grid.load(fp))
-
-        for arg in GRID_NODE_ARGS:
-            node = getattr(namespace, arg)
-            if type(node) == tuple:
-                ResolveNode(
-                    dest=arg,
-                    option_strings=[]
-                ).__call__(parser, namespace, node, *args, **kwargs)
-
-
-class ResolveNode(Action):
-    def __call__(self, parser, namespace, position: Position, *args, **kwargs):
-        r, c = position
-        if not (0 <= r < len(namespace.grid)):
-            raise ValueError(f"row (y) position {r} is out of bounds")
-        if not (0 <= c < len(namespace.grid[0])):
-            raise ValueError(f"column (x) position {c} is out of bounds")
-
-        setattr(namespace, self.dest, namespace.grid[r][c] if isinstance(namespace.grid, Grid) else position)
-
-
+# We only need one instance so we might as well declare it here with
+# the type functions defined above
 ARG_PARSER = ArgumentParser()
 ARG_PARSER.add_argument(
     "--input",
     dest="grid",
-    type=Path,
-    action=ReadGrid,
-    required=True
+    type=grid_file,
+    required=True,
+    help="The .dat file containing the grid to search in"
 )
-for _arg in GRID_NODE_ARGS:
-    ARG_PARSER.add_argument(
-        f"--{_arg}",
-        type=parse_position,
-        action=ResolveNode,
-        required=True
-    )
+
+ARG_PARSER.add_argument(
+    f"--start",
+    type=parse_position,
+    required=True,
+    help="The position R,C in the grid to begin the search at"
+)
+
+ARG_PARSER.add_argument(
+    f"--goal",
+    type=parse_position,
+    required=True,
+    help="The position R,C of the goal node in the grid."
+)
+
 ARG_PARSER.add_argument(
     "--search",
-    type=parse_search_method
+    type=parse_search_method,
+    help="The search method to use, one of BFS, DFS, ASTAR, ALL"
 )
 
 
